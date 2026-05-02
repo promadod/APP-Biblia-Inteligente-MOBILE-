@@ -1,6 +1,5 @@
 Resumo Bíblico para App -
-Pentateuco e Históricos (Gênesis a
-Rute) - Edição Detalhada
+Todos os Livros da Biblia resumido, dando ênfase aos personagens mais marcante de cada livro
 
 Gênesis
 Resumo Executivo
