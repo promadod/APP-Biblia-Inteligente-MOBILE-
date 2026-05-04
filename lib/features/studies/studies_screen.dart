@@ -27,6 +27,24 @@ String lessonAtLabel(dynamic raw) {
   return '${_twoDigits(l.day)}/${_twoDigits(l.month)}/${l.year} · ${_twoDigits(l.hour)}:${_twoDigits(l.minute)}';
 }
 
+Future<void> _openStudyReaderFullscreen(
+  BuildContext context, {
+  required String title,
+  required String body,
+  String? metaLine,
+}) {
+  return Navigator.of(context).push<void>(
+    MaterialPageRoute<void>(
+      fullscreenDialog: true,
+      builder: (ctx) => _StudyReaderPage(
+        title: title,
+        body: body,
+        metaLine: metaLine,
+      ),
+    ),
+  );
+}
+
 class StudiesScreen extends ConsumerStatefulWidget {
   const StudiesScreen({super.key});
 
@@ -295,21 +313,19 @@ class _StudiesScreenState extends ConsumerState<StudiesScreen> with SingleTicker
   }
 
   Future<void> _openCollectiveDetail(Map<String, dynamic> m) async {
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: Text('${m['title']}'),
-        content: SingleChildScrollView(
-          child: SelectableText(
-            '${m['content']}',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.35),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Fechar')),
-        ],
-      ),
+    final lesson = lessonAtLabel(m['lesson_at']);
+    final teacher = '${m['teacher_name'] ?? '—'}';
+    final audience = '${m['audience_group_name'] ?? ''}'.trim();
+    final metaBits = <String>[
+      if (lesson.isNotEmpty) 'Aula: $lesson',
+      'Professor: $teacher',
+      if (audience.isNotEmpty) audience,
+    ];
+    await _openStudyReaderFullscreen(
+      context,
+      title: '${m['title']}',
+      body: '${m['content']}',
+      metaLine: metaBits.join(' · '),
     );
   }
 
@@ -437,52 +453,77 @@ class _StudiesScreenState extends ConsumerState<StudiesScreen> with SingleTicker
                         padding: const EdgeInsets.only(bottom: 12),
                         child: NeonCard(
                           accentColor: accent,
-                          child: Column(
+                          child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      '${m['title']}',
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.primary,
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => _openStudyReaderFullscreen(
+                                        context,
+                                        title: '${m['title']}',
+                                        body: '${m['content']}',
+                                        metaLine: dateLabel.isNotEmpty ? 'Criado: $dateLabel' : null,
+                                      ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(left: 2, bottom: 2, top: 2),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '${m['title']}',
+                                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                                fontWeight: FontWeight.w700,
+                                                color: AppColors.primary,
+                                              ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Toque para ler em tela cheia',
+                                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                                color: AppColors.primary.withValues(alpha: 0.82),
+                                              ),
+                                        ),
+                                        if (dateLabel.isNotEmpty) ...[
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.calendar_today_outlined,
+                                                size: 15,
+                                                color: AppColors.onBackgroundMuted,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                dateLabel,
+                                                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                                      color: AppColors.onBackgroundMuted,
+                                                    ),
+                                              ),
+                                            ],
                                           ),
+                                        ],
+                                        const SizedBox(height: 10),
+                                        Text(
+                                          '${m['content']}',
+                                          maxLines: 4,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.35),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  IconButton(
-                                    icon: const Icon(Icons.edit_outlined, color: AppColors.accent),
-                                    onPressed: () => _editor(existing: m),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline, color: Color.fromRGBO(2, 255, 171, 1)),
-                                    onPressed: () => _confirmDelete(m),
-                                  ),
-                                ],
-                              ),
-                              if (dateLabel.isNotEmpty) ...[
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Icon(Icons.calendar_today_outlined, size: 15, color: AppColors.onBackgroundMuted),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      dateLabel,
-                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                            color: AppColors.onBackgroundMuted,
-                                          ),
-                                    ),
-                                  ],
                                 ),
-                              ],
-                              const SizedBox(height: 10),
-                              Text(
-                                '${m['content']}',
-                                maxLines: 4,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.35),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, color: AppColors.accent),
+                                tooltip: 'Editar',
+                                onPressed: () => _editor(existing: m),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Color.fromRGBO(2, 255, 171, 1)),
+                                tooltip: 'Eliminar',
+                                onPressed: () => _confirmDelete(m),
                               ),
                             ],
                           ),
@@ -732,6 +773,62 @@ class _StudiesScreenState extends ConsumerState<StudiesScreen> with SingleTicker
           _buildPersonalTab(),
           _buildCollectiveTab(),
         ],
+      ),
+    );
+  }
+}
+
+/// Leitor de estudo em tela cheia (rolagem livre e texto seleccionável).
+class _StudyReaderPage extends StatelessWidget {
+  const _StudyReaderPage({
+    required this.title,
+    required this.body,
+    this.metaLine,
+  });
+
+  final String title;
+  final String body;
+  final String? metaLine;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        scrolledUnderElevation: 0,
+        title: Text(
+          title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.close_rounded),
+          onPressed: () => Navigator.pop(context),
+          tooltip: 'Fechar',
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (metaLine != null && metaLine!.trim().isNotEmpty) ...[
+              Text(
+                metaLine!.trim(),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(color: AppColors.onBackgroundMuted, height: 1.35),
+              ),
+              const SizedBox(height: 20),
+            ],
+            SelectableText(
+              body,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    height: 1.5,
+                    color: AppColors.onBackground,
+                  ),
+            ),
+          ],
+        ),
       ),
     );
   }
